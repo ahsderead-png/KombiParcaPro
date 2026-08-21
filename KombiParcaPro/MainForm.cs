@@ -68,7 +68,7 @@ internal sealed class PhotoForm : Form
         {
             state.Text="Fotoğraf yükleniyor...";var folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"KombiParcaPro","ImageCache");Directory.CreateDirectory(folder);var file=Path.Combine(folder,Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(info.ImageUrl)))+".img");
             byte[] data;if(File.Exists(file))data=await File.ReadAllBytesAsync(file);else{using var http=new HttpClient();http.DefaultRequestHeaders.UserAgent.ParseAdd("KombiParcaPro/2.1");data=await http.GetByteArrayAsync(info.ImageUrl);await File.WriteAllBytesAsync(file,data);}
-            using var decoded=SixLabors.ImageSharp.Image.Load(data);using var ms=new MemoryStream();decoded.SaveAsPng(ms);ms.Position=0;using var temp=new Bitmap(ms);picture.Image=new Bitmap(temp);state.Text=$"Kaynak: {info.Verification}";
+            using var decoded=SixLabors.ImageSharp.Image.Load(data);using var ms=new MemoryStream();decoded.Save(ms,new SixLabors.ImageSharp.Formats.Png.PngEncoder());ms.Position=0;using var temp=new Bitmap(ms);picture.Image=new Bitmap(temp);state.Text=$"Kaynak: {info.Verification}";
         }
         catch(Exception ex){state.Text="Fotoğraf yüklenemedi: "+ex.Message;}
     }
