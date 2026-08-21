@@ -6,25 +6,28 @@ internal sealed class MainForm : Form
 {
     readonly TextBox search = new() { PlaceholderText="Parça adı, OEM kodu, marka veya model ara...", Dock=DockStyle.Fill, Font=new("Segoe UI",12) };
     readonly CheckBox low = new() { Text="Kritik stokları göster", AutoSize=true };
+    readonly ComboBox brand = new() { DropDownStyle=ComboBoxStyle.DropDownList, Dock=DockStyle.Fill, Font=new("Segoe UI",10) };
     readonly DataGridView grid = new() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.DisplayedCells };
     readonly Label status = new() { Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleLeft };
 
     public MainForm()
     {
         Text="KombiParcaPro — Yedek Parça Katalog ve Stok"; Width=1450; Height=820; StartPosition=FormStartPosition.CenterScreen; MinimumSize=new(1050,650); BackColor=Color.FromArgb(245,246,248);
-        var title=new Label { Text="KombiParcaPro", Dock=DockStyle.Left, Width=240, Font=new("Segoe UI Semibold",20), ForeColor=Color.White, TextAlign=ContentAlignment.MiddleLeft, Padding=new(18,0,0,0) };
+        var title=new Label { Text="KombiParcaPro 2.0", Dock=DockStyle.Left, Width=260, Font=new("Segoe UI Semibold",20), ForeColor=Color.White, TextAlign=ContentAlignment.MiddleLeft, Padding=new(78,0,0,0) };
         var header=new Panel { Dock=DockStyle.Top, Height=72, BackColor=Color.FromArgb(25,25,25) }; header.Controls.Add(title);
+        var logoPath=Path.Combine(AppContext.BaseDirectory,"Assets","3D-Teknik-Servis-Logo.png");if(File.Exists(logoPath)){var logo=new PictureBox{Dock=DockStyle.Left,Width=70,SizeMode=PictureBoxSizeMode.Zoom,Padding=new(8)};logo.Image=Image.FromFile(logoPath);header.Controls.Add(logo);logo.BringToFront();}
         var orange=new Panel { Dock=DockStyle.Bottom, Height=5, BackColor=Color.FromArgb(241,112,20) }; header.Controls.Add(orange);
         var buttons=new FlowLayoutPanel { Dock=DockStyle.Right, Width=650, FlowDirection=FlowDirection.LeftToRight, Padding=new(5,15,0,0) };
         buttons.Controls.AddRange(new Control[]{Btn("Yeni Parça",(_,_)=>Edit(null)),Btn("Düzenle",(_,_)=>EditSelected()),Btn("Stok Giriş",(_,_)=>Move("Giriş")),Btn("Stok Çıkış",(_,_)=>Move("Çıkış")),Btn("Yenile",(_,_)=>LoadData())}); header.Controls.Add(buttons);
-        var searchBar=new TableLayoutPanel { Dock=DockStyle.Top, Height=62, Padding=new(16,13,16,8), ColumnCount=2 }; searchBar.ColumnStyles.Add(new(SizeType.Percent,100));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190)); searchBar.Controls.Add(search,0,0);searchBar.Controls.Add(low,1,0);
+        brand.Items.AddRange(new object[]{"Tüm Markalar","Demirdöküm","E.C.A.","Baymak","Ariston","Vaillant","Viessmann","Bosch","Buderus","Baxi","Ferroli","Üniversal/Diğer"});brand.SelectedIndex=0;
+        var searchBar=new TableLayoutPanel { Dock=DockStyle.Top, Height=62, Padding=new(16,13,16,8), ColumnCount=3 }; searchBar.ColumnStyles.Add(new(SizeType.Percent,100));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190)); searchBar.Controls.Add(search,0,0);searchBar.Controls.Add(brand,1,0);searchBar.Controls.Add(low,2,0);
         var footer=new TableLayoutPanel { Dock=DockStyle.Bottom, Height=38, Padding=new(12,0,12,0), ColumnCount=2 }; footer.ColumnStyles.Add(new(SizeType.Percent,100));footer.ColumnStyles.Add(new(SizeType.Absolute,330));footer.Controls.Add(status,0,0); var info=new LinkLabel { Text="Veriler bu bilgisayarda çevrimdışı saklanır", Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleRight }; footer.Controls.Add(info,1,0);
         var host=new Panel { Dock=DockStyle.Fill, Padding=new(16,0,16,8) }; host.Controls.Add(grid);
         Controls.Add(host);Controls.Add(footer);Controls.Add(searchBar);Controls.Add(header);
-        search.TextChanged+=(_,_)=>LoadData();low.CheckedChanged+=(_,_)=>LoadData();grid.CellDoubleClick+=(_,_)=>EditSelected();LoadData();
+        search.TextChanged+=(_,_)=>LoadData();brand.SelectedIndexChanged+=(_,_)=>LoadData();low.CheckedChanged+=(_,_)=>LoadData();grid.CellDoubleClick+=(_,_)=>EditSelected();LoadData();
     }
     static Button Btn(string text, EventHandler action){var b=new Button{Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(241,112,20),ForeColor=Color.White,FlatStyle=FlatStyle.Flat,Font=new("Segoe UI Semibold",9)};b.FlatAppearance.BorderSize=0;b.Click+=action;return b;}
-    void LoadData(){grid.DataSource=Database.Search(search.Text.Trim(),low.Checked);if(grid.Columns.Contains("Id"))grid.Columns["Id"]!.Visible=false;foreach(DataGridViewRow row in grid.Rows){double s=Convert.ToDouble(row.Cells["Stok"].Value),m=Convert.ToDouble(row.Cells["Asgari Stok"].Value);if(s<=m)row.DefaultCellStyle.BackColor=Color.MistyRose;}status.Text=$"{grid.Rows.Count} parça listeleniyor";}
+    void LoadData(){grid.DataSource=Database.Search(search.Text.Trim(),low.Checked,brand.SelectedItem?.ToString()??"Tüm Markalar");if(grid.Columns.Contains("Id"))grid.Columns["Id"]!.Visible=false;foreach(DataGridViewRow row in grid.Rows){double s=Convert.ToDouble(row.Cells["Stok"].Value),m=Convert.ToDouble(row.Cells["Asgari Stok"].Value);if(m>0&&s<=m)row.DefaultCellStyle.BackColor=Color.MistyRose;}status.Text=$"{grid.Rows.Count:N0} parça listeleniyor • Öncelik: Demirdöküm → E.C.A. → Baymak → Ariston";}
     int? SelectedId()=>grid.CurrentRow is null?null:Convert.ToInt32(grid.CurrentRow.Cells["Id"].Value);
     void EditSelected(){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}Edit(Database.Get(id.Value));}
     void Edit(Part? p){using var f=new PartForm(p);if(f.ShowDialog(this)==DialogResult.OK)LoadData();}
