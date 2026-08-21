@@ -1,0 +1,48 @@
+using System.Diagnostics;
+
+namespace KombiParcaPro;
+
+internal sealed class MainForm : Form
+{
+    readonly TextBox search = new() { PlaceholderText="Parça adı, OEM kodu, marka veya model ara...", Dock=DockStyle.Fill, Font=new("Segoe UI",12) };
+    readonly CheckBox low = new() { Text="Kritik stokları göster", AutoSize=true };
+    readonly DataGridView grid = new() { Dock=DockStyle.Fill, ReadOnly=true, AllowUserToAddRows=false, SelectionMode=DataGridViewSelectionMode.FullRowSelect, MultiSelect=false, AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.DisplayedCells };
+    readonly Label status = new() { Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleLeft };
+
+    public MainForm()
+    {
+        Text="KombiParcaPro — Yedek Parça Katalog ve Stok"; Width=1450; Height=820; StartPosition=FormStartPosition.CenterScreen; MinimumSize=new(1050,650); BackColor=Color.FromArgb(245,246,248);
+        var title=new Label { Text="KombiParcaPro", Dock=DockStyle.Left, Width=240, Font=new("Segoe UI Semibold",20), ForeColor=Color.White, TextAlign=ContentAlignment.MiddleLeft, Padding=new(18,0,0,0) };
+        var header=new Panel { Dock=DockStyle.Top, Height=72, BackColor=Color.FromArgb(25,25,25) }; header.Controls.Add(title);
+        var orange=new Panel { Dock=DockStyle.Bottom, Height=5, BackColor=Color.FromArgb(241,112,20) }; header.Controls.Add(orange);
+        var buttons=new FlowLayoutPanel { Dock=DockStyle.Right, Width=650, FlowDirection=FlowDirection.LeftToRight, Padding=new(5,15,0,0) };
+        buttons.Controls.AddRange(new Control[]{Btn("Yeni Parça",(_,_)=>Edit(null)),Btn("Düzenle",(_,_)=>EditSelected()),Btn("Stok Giriş",(_,_)=>Move("Giriş")),Btn("Stok Çıkış",(_,_)=>Move("Çıkış")),Btn("Yenile",(_,_)=>LoadData())}); header.Controls.Add(buttons);
+        var searchBar=new TableLayoutPanel { Dock=DockStyle.Top, Height=62, Padding=new(16,13,16,8), ColumnCount=2 }; searchBar.ColumnStyles.Add(new(SizeType.Percent,100));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190)); searchBar.Controls.Add(search,0,0);searchBar.Controls.Add(low,1,0);
+        var footer=new TableLayoutPanel { Dock=DockStyle.Bottom, Height=38, Padding=new(12,0,12,0), ColumnCount=2 }; footer.ColumnStyles.Add(new(SizeType.Percent,100));footer.ColumnStyles.Add(new(SizeType.Absolute,330));footer.Controls.Add(status,0,0); var info=new LinkLabel { Text="Veriler bu bilgisayarda çevrimdışı saklanır", Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleRight }; footer.Controls.Add(info,1,0);
+        var host=new Panel { Dock=DockStyle.Fill, Padding=new(16,0,16,8) }; host.Controls.Add(grid);
+        Controls.Add(host);Controls.Add(footer);Controls.Add(searchBar);Controls.Add(header);
+        search.TextChanged+=(_,_)=>LoadData();low.CheckedChanged+=(_,_)=>LoadData();grid.CellDoubleClick+=(_,_)=>EditSelected();LoadData();
+    }
+    static Button Btn(string text, EventHandler action){var b=new Button{Text=text,AutoSize=true,Height=36,BackColor=Color.FromArgb(241,112,20),ForeColor=Color.White,FlatStyle=FlatStyle.Flat,Font=new("Segoe UI Semibold",9)};b.FlatAppearance.BorderSize=0;b.Click+=action;return b;}
+    void LoadData(){grid.DataSource=Database.Search(search.Text.Trim(),low.Checked);if(grid.Columns.Contains("Id"))grid.Columns["Id"]!.Visible=false;foreach(DataGridViewRow row in grid.Rows){double s=Convert.ToDouble(row.Cells["Stok"].Value),m=Convert.ToDouble(row.Cells["Asgari Stok"].Value);if(s<=m)row.DefaultCellStyle.BackColor=Color.MistyRose;}status.Text=$"{grid.Rows.Count} parça listeleniyor";}
+    int? SelectedId()=>grid.CurrentRow is null?null:Convert.ToInt32(grid.CurrentRow.Cells["Id"].Value);
+    void EditSelected(){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}Edit(Database.Get(id.Value));}
+    void Edit(Part? p){using var f=new PartForm(p);if(f.ShowDialog(this)==DialogResult.OK)LoadData();}
+    void Move(string type){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}using var f=new StockForm(type);if(f.ShowDialog(this)!=DialogResult.OK)return;try{Database.MoveStock(id.Value,f.Quantity,type,f.Note);LoadData();}catch(Exception ex){MessageBox.Show(ex.Message,"Stok işlemi",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
+}
+
+internal sealed class PartForm : Form
+{
+    readonly Part p; readonly Dictionary<string,TextBox> fields=new(); readonly NumericUpDown stock=new(){Maximum=1000000,DecimalPlaces=2}; readonly NumericUpDown min=new(){Maximum=1000000,DecimalPlaces=2}; readonly NumericUpDown purchase=new(){Maximum=10000000,DecimalPlaces=2}; readonly NumericUpDown sale=new(){Maximum=10000000,DecimalPlaces=2};
+    public PartForm(Part? part){p=part??new();Text=p.Id==0?"Yeni Parça":"Parça Düzenle";Width=670;Height=720;StartPosition=FormStartPosition.CenterParent;var table=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new(16),ColumnCount=2,AutoScroll=true};table.ColumnStyles.Add(new(SizeType.Absolute,150));table.ColumnStyles.Add(new(SizeType.Percent,100));
+        Add(table,"Parça Adı","Name",p.Name);Add(table,"Kategori","Category",p.Category);Add(table,"Marka / Tip","Brand",p.Brand);Add(table,"Model / Uyumluluk","Model",p.Model);Add(table,"OEM Kodu","OemCode",p.OemCode);Add(table,"Muadil Kodu","EquivalentCode",p.EquivalentCode);Add(table,"Tedarikçi","Supplier",p.Supplier);Add(table,"Raf / Konum","Shelf",p.Shelf);Add(table,"Birim","Unit",p.Unit);Num(table,"Mevcut Stok",stock,(decimal)p.Stock);Num(table,"Asgari Stok",min,(decimal)p.MinStock);Num(table,"Alış Fiyatı",purchase,(decimal)p.PurchasePrice);Num(table,"Satış Fiyatı",sale,(decimal)p.SalePrice);Add(table,"Notlar","Notes",p.Notes,true);var save=new Button{Text="KAYDET",Dock=DockStyle.Fill,Height=42,BackColor=Color.FromArgb(241,112,20),ForeColor=Color.White,FlatStyle=FlatStyle.Flat};save.Click+=Save;table.Controls.Add(new Label(),0,table.RowCount);table.Controls.Add(save,1,table.RowCount-1);Controls.Add(table);}
+    void Add(TableLayoutPanel t,string label,string key,string value,bool multi=false){int r=t.RowCount++;t.RowStyles.Add(new(SizeType.AutoSize));t.Controls.Add(new Label{Text=label,AutoSize=true,Padding=new(0,8,0,0)},0,r);var box=new TextBox{Text=value,Dock=DockStyle.Fill,Multiline=multi,Height=multi?70:30};fields[key]=box;t.Controls.Add(box,1,r);}
+    static void Num(TableLayoutPanel t,string label,NumericUpDown n,decimal value){int r=t.RowCount++;t.RowStyles.Add(new(SizeType.AutoSize));t.Controls.Add(new Label{Text=label,AutoSize=true,Padding=new(0,8,0,0)},0,r);n.Value=value;n.Dock=DockStyle.Fill;t.Controls.Add(n,1,r);}
+    void Save(object? s,EventArgs e){if(string.IsNullOrWhiteSpace(fields["Name"].Text)){MessageBox.Show("Parça adı zorunludur.");return;}p.Name=fields["Name"].Text.Trim();p.Category=fields["Category"].Text.Trim();p.Brand=fields["Brand"].Text.Trim();p.Model=fields["Model"].Text.Trim();p.OemCode=fields["OemCode"].Text.Trim();p.EquivalentCode=fields["EquivalentCode"].Text.Trim();p.Supplier=fields["Supplier"].Text.Trim();p.Shelf=fields["Shelf"].Text.Trim();p.Unit=fields["Unit"].Text.Trim();p.Stock=(double)stock.Value;p.MinStock=(double)min.Value;p.PurchasePrice=(double)purchase.Value;p.SalePrice=(double)sale.Value;p.Notes=fields["Notes"].Text.Trim();Database.Save(p);DialogResult=DialogResult.OK;}
+}
+
+internal sealed class StockForm : Form
+{
+    readonly NumericUpDown qty=new(){Minimum=.01M,Maximum=1000000,DecimalPlaces=2,Value=1,Dock=DockStyle.Fill};readonly TextBox note=new(){Dock=DockStyle.Fill};public double Quantity=>(double)qty.Value;public string Note=>note.Text.Trim();
+    public StockForm(string type){Text=$"Stok {type}";Width=430;Height=210;StartPosition=FormStartPosition.CenterParent;var t=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new(16),ColumnCount=2};t.ColumnStyles.Add(new(SizeType.Absolute,100));t.ColumnStyles.Add(new(SizeType.Percent,100));t.Controls.Add(new Label{Text="Miktar",AutoSize=true},0,0);t.Controls.Add(qty,1,0);t.Controls.Add(new Label{Text="Açıklama",AutoSize=true},0,1);t.Controls.Add(note,1,1);var ok=new Button{Text="ONAYLA",Dock=DockStyle.Fill,BackColor=Color.FromArgb(241,112,20),ForeColor=Color.White,FlatStyle=FlatStyle.Flat};ok.Click+=(_,_)=>DialogResult=DialogResult.OK;t.Controls.Add(ok,1,2);Controls.Add(t);}
+}
