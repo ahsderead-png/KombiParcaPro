@@ -8,7 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>KombiParcaPro</AssemblyName>
     <RootNamespace>KombiParcaPro</RootNamespace>
-    <Version>2.1.1</Version>
+    <Version>2.1.2</Version>
     <ApplicationIcon>Assets\KombiParcaPro.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
@@ -16,7 +16,7 @@
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Assets\catalog-v2.json" LogicalName="KombiParcaPro.catalog-v2.json" />
+    <EmbeddedResource Include="Assets\catalog-v2-part*.json" />
     <Content Include="Assets\3D-Teknik-Servis-Logo.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>Assets\3D-Teknik-Servis-Logo.png</Link></Content>
     <Content Include="Assets\KombiParcaPro.ico"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>Assets\KombiParcaPro.ico</Link></Content>
   </ItemGroup>
