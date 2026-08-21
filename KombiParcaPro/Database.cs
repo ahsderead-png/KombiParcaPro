@@ -1,5 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System.Data;
+using System.Reflection;
+using System.Text.Json;
 
 namespace KombiParcaPro;
 
@@ -30,8 +32,17 @@ internal static class Database
           Website TEXT NOT NULL DEFAULT '', Address TEXT NOT NULL DEFAULT '', Notes TEXT NOT NULL DEFAULT '');
         """;
         cmd.ExecuteNonQuery();
+        EnsureColumn(c,"CatalogKey","TEXT NOT NULL DEFAULT ''"); EnsureColumn(c,"Technical","TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(c,"Compatibility","TEXT NOT NULL DEFAULT ''"); EnsureColumn(c,"Manufacturer","TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(c,"ManufacturerCode","TEXT NOT NULL DEFAULT ''"); EnsureColumn(c,"SupplierCode","TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(c,"SourceUrl","TEXT NOT NULL DEFAULT ''"); EnsureColumn(c,"ImageUrl","TEXT NOT NULL DEFAULT ''");
+        EnsureColumn(c,"Verification","TEXT NOT NULL DEFAULT ''"); EnsureColumn(c,"BrandPriority","INTEGER NOT NULL DEFAULT 99");
         Seed(c);
+        ImportCatalog(c);
     }
+
+    static void EnsureColumn(SqliteConnection c,string name,string definition){using var q=c.CreateCommand();q.CommandText="PRAGMA table_info(Parts)";using var r=q.ExecuteReader();while(r.Read())if(r.GetString(1).Equals(name,StringComparison.OrdinalIgnoreCase))return;r.Close();using var a=c.CreateCommand();a.CommandText=$"ALTER TABLE Parts ADD COLUMN {name} {definition}";a.ExecuteNonQuery();}
+    static void ImportCatalog(SqliteConnection c){using var n=c.CreateCommand();n.CommandText="SELECT COUNT(*) FROM Parts WHERE CatalogKey<>''";if(Convert.ToInt32(n.ExecuteScalar())>=1700)return;using var s=Assembly.GetExecutingAssembly().GetManifestResourceStream("KombiParcaPro.catalog-v2.json");if(s is null)return;var rows=JsonSerializer.Deserialize<List<CatalogRow>>(s)??[];using var tx=c.BeginTransaction();foreach(var x in rows){using var q=c.CreateCommand();q.Transaction=tx;q.CommandText="""INSERT OR IGNORE INTO Parts(CatalogKey,Name,Category,Brand,Model,OemCode,EquivalentCode,Supplier,Unit,Stock,MinStock,Notes,Technical,Compatibility,Manufacturer,ManufacturerCode,SupplierCode,SourceUrl,ImageUrl,Verification,BrandPriority,UpdatedAt) SELECT $k,$n,$c,$b,$m,$o,$e,$s,'Adet',0,0,$no,$t,$co,$ma,$mc,$sc,$u,$i,$v,$p,$d WHERE NOT EXISTS(SELECT 1 FROM Parts WHERE CatalogKey=$k)""";q.Parameters.AddWithValue("$k",x.CatalogKey);q.Parameters.AddWithValue("$n",x.Name);q.Parameters.AddWithValue("$c",x.Category);q.Parameters.AddWithValue("$b",x.BrandDisplay);q.Parameters.AddWithValue("$m",x.Model);q.Parameters.AddWithValue("$o",x.OemCode);q.Parameters.AddWithValue("$e",x.ManufacturerCode);q.Parameters.AddWithValue("$s",x.Supplier);q.Parameters.AddWithValue("$no",x.Verification);q.Parameters.AddWithValue("$t",x.Technical);q.Parameters.AddWithValue("$co",x.Compatibility);q.Parameters.AddWithValue("$ma",x.Manufacturer);q.Parameters.AddWithValue("$mc",x.ManufacturerCode);q.Parameters.AddWithValue("$sc",x.SupplierCode);q.Parameters.AddWithValue("$u",x.SourceUrl);q.Parameters.AddWithValue("$i",x.ImageUrl);q.Parameters.AddWithValue("$v",x.Verification);q.Parameters.AddWithValue("$p",x.Priority);q.Parameters.AddWithValue("$d",DateTime.Now.ToString("s"));q.ExecuteNonQuery();}tx.Commit();}
 
     private static void Seed(SqliteConnection c)
     {
@@ -54,17 +65,18 @@ internal static class Database
         }
     }
 
-    public static DataTable Search(string term, bool lowOnly)
+    public static DataTable Search(string term, bool lowOnly, string brand="Tüm Markalar")
     {
         using var c = new SqliteConnection(ConnectionString); c.Open(); using var cmd = c.CreateCommand();
         cmd.CommandText = """
         SELECT Id, Name AS 'Parça Adı', Category AS 'Kategori', Brand AS 'Marka', Model AS 'Model/Uyumluluk',
         OemCode AS 'OEM Kodu', EquivalentCode AS 'Muadil Kodu', Stock AS 'Stok', Unit AS 'Birim',
         MinStock AS 'Asgari Stok', SalePrice AS 'Satış Fiyatı', Shelf AS 'Raf', Supplier AS 'Tedarikçi'
-        FROM Parts WHERE ($q='' OR Name LIKE $like OR Category LIKE $like OR Brand LIKE $like OR Model LIKE $like OR OemCode LIKE $like OR EquivalentCode LIKE $like)
-        AND ($low=0 OR Stock<=MinStock) ORDER BY Name
+        FROM Parts WHERE ($q='' OR Name LIKE $like OR Category LIKE $like OR Brand LIKE $like OR Model LIKE $like OR OemCode LIKE $like OR EquivalentCode LIKE $like OR Technical LIKE $like OR Compatibility LIKE $like OR SupplierCode LIKE $like)
+        AND ($brand='Tüm Markalar' OR Brand=$brand)
+        AND ($low=0 OR (Stock<=MinStock AND MinStock>0)) ORDER BY BrandPriority,Brand,Model,Name
         """;
-        cmd.Parameters.AddWithValue("$q", term); cmd.Parameters.AddWithValue("$like", $"%{term}%"); cmd.Parameters.AddWithValue("$low", lowOnly ? 1 : 0);
+        cmd.Parameters.AddWithValue("$q", term); cmd.Parameters.AddWithValue("$like", $"%{term}%"); cmd.Parameters.AddWithValue("$low", lowOnly ? 1 : 0);cmd.Parameters.AddWithValue("$brand",brand);
         using var reader = cmd.ExecuteReader(); var table = new DataTable(); table.Load(reader); return table;
     }
 
@@ -91,6 +103,8 @@ internal static class Database
         using var m=c.CreateCommand(); m.Transaction=tx; m.CommandText="INSERT INTO Movements(PartId,MovementType,Quantity,Description,CreatedAt) VALUES($id,$t,$q,$n,$d)"; m.Parameters.AddWithValue("$id",id);m.Parameters.AddWithValue("$t",type);m.Parameters.AddWithValue("$q",qty);m.Parameters.AddWithValue("$n",note);m.Parameters.AddWithValue("$d",DateTime.Now.ToString("s"));m.ExecuteNonQuery();tx.Commit();
     }
 }
+
+internal sealed class CatalogRow { public string CatalogKey{get;set;}="";public string BrandDisplay{get;set;}="";public string Model{get;set;}="";public string Category{get;set;}="";public string Name{get;set;}="";public string Manufacturer{get;set;}="";public string ManufacturerCode{get;set;}="";public string OemCode{get;set;}="";public string SupplierCode{get;set;}="";public string Technical{get;set;}="";public string Compatibility{get;set;}="";public string Supplier{get;set;}="";public string SourceUrl{get;set;}="";public string ImageUrl{get;set;}="";public string Verification{get;set;}="";public int Priority{get;set;}=99; }
 
 internal sealed class Part
 {

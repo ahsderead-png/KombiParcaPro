@@ -1,5 +1,5 @@
 #define MyAppName "KombiParcaPro"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "2.0.0"
 #define MyAppPublisher "KombiParcaPro"
 #define MyAppExeName "KombiParcaPro.exe"
 
@@ -11,7 +11,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\KombiParcaPro
 DefaultGroupName=KombiParcaPro
 OutputDir=..\SetupOutput
-OutputBaseFilename=KombiParcaPro_Setup_v1.0.0_x64
+OutputBaseFilename=KombiParcaPro_Setup_v2.0.0_x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -19,6 +19,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\{#MyAppExeName}
+SetupIconFile=..\KombiParcaPro\Assets\KombiParcaPro.ico
 
 [Languages]
 Name: "turkish"; MessagesFile: "compiler:Languages\Turkish.isl"
