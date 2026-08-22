@@ -13,12 +13,12 @@ internal sealed class MainForm : Form
     public MainForm()
     {
         Text="KombiParcaPro — Yedek Parça Katalog ve Stok"; Width=1450; Height=820; StartPosition=FormStartPosition.CenterScreen; MinimumSize=new(1050,650); BackColor=Color.FromArgb(245,246,248);
-        var title=new Label { Text="KombiParcaPro 2.3", Dock=DockStyle.Left, Width=300, Font=new("Segoe UI Semibold",20), ForeColor=Color.White, TextAlign=ContentAlignment.MiddleLeft, Padding=new(78,0,0,0) };
+        var title=new Label { Text="KombiParcaPro 3.0", Dock=DockStyle.Left, Width=300, Font=new("Segoe UI Semibold",20), ForeColor=Color.White, TextAlign=ContentAlignment.MiddleLeft, Padding=new(78,0,0,0) };
         var header=new Panel { Dock=DockStyle.Top, Height=72, BackColor=Color.FromArgb(25,25,25) }; header.Controls.Add(title);
         var logoPath=Path.Combine(AppContext.BaseDirectory,"Assets","3D-Teknik-Servis-Logo.png");if(File.Exists(logoPath)){var logo=new PictureBox{Dock=DockStyle.Left,Width=70,SizeMode=PictureBoxSizeMode.Zoom,Padding=new(8)};logo.Image=Image.FromFile(logoPath);header.Controls.Add(logo);logo.BringToFront();}
         var orange=new Panel { Dock=DockStyle.Bottom, Height=5, BackColor=Color.FromArgb(241,112,20) }; header.Controls.Add(orange);
-        var buttons=new FlowLayoutPanel { Dock=DockStyle.Right, Width=790, FlowDirection=FlowDirection.LeftToRight, Padding=new(5,15,0,0) };
-        buttons.Controls.AddRange(new Control[]{Btn("Parça Detayı",(_,_)=>ShowDetails()),Btn("Kataloglar",(_,_)=>ShowCatalogs()),Btn("Yeni Parça",(_,_)=>Edit(null)),Btn("Düzenle",(_,_)=>EditSelected()),Btn("Stok Giriş",(_,_)=>Move("Giriş")),Btn("Stok Çıkış",(_,_)=>Move("Çıkış")),Btn("Yenile",(_,_)=>LoadData())}); header.Controls.Add(buttons);
+        var buttons=new FlowLayoutPanel { Dock=DockStyle.Right, Width=930, FlowDirection=FlowDirection.LeftToRight, Padding=new(5,15,0,0) };
+        buttons.Controls.AddRange(new Control[]{Btn("Parça Detayı",(_,_)=>ShowDetails()),Btn("Kataloglar",(_,_)=>ShowCatalogs()),Btn("Teknik Kütüphane",(_,_)=>ShowLibrary()),Btn("Yeni Parça",(_,_)=>Edit(null)),Btn("Düzenle",(_,_)=>EditSelected()),Btn("Stok Giriş",(_,_)=>Move("Giriş")),Btn("Stok Çıkış",(_,_)=>Move("Çıkış")),Btn("Yenile",(_,_)=>LoadData())}); header.Controls.Add(buttons);
         brand.Items.AddRange(new object[]{"Tüm Markalar","Demirdöküm","E.C.A.","Baymak","Ariston","Vaillant","Viessmann","Bosch","Buderus","Baxi","Ferroli","Üniversal/Diğer"});brand.SelectedIndex=0;
         var searchBar=new TableLayoutPanel { Dock=DockStyle.Top, Height=62, Padding=new(16,13,16,8), ColumnCount=3 }; searchBar.ColumnStyles.Add(new(SizeType.Percent,100));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190));searchBar.ColumnStyles.Add(new(SizeType.Absolute,190)); searchBar.Controls.Add(search,0,0);searchBar.Controls.Add(brand,1,0);searchBar.Controls.Add(low,2,0);
         var footer=new TableLayoutPanel { Dock=DockStyle.Bottom, Height=38, Padding=new(12,0,12,0), ColumnCount=2 }; footer.ColumnStyles.Add(new(SizeType.Percent,100));footer.ColumnStyles.Add(new(SizeType.Absolute,330));footer.Controls.Add(status,0,0); var info=new LinkLabel { Text="Veriler bu bilgisayarda çevrimdışı saklanır", Dock=DockStyle.Fill, TextAlign=ContentAlignment.MiddleRight }; footer.Controls.Add(info,1,0);
@@ -32,6 +32,7 @@ internal sealed class MainForm : Form
     void EditSelected(){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}Edit(Database.Get(id.Value));}
     void ShowDetails(){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}using var f=new PartDetailForm(id.Value);f.ShowDialog(this);}
     void ShowCatalogs(){using var f=new CatalogCenterForm();f.ShowDialog(this);}
+    void ShowLibrary(){using var f=new ProfessionalCatalogForm();f.ShowDialog(this);}
     void Edit(Part? p){using var f=new PartForm(p);if(f.ShowDialog(this)==DialogResult.OK)LoadData();}
     void Move(string type){var id=SelectedId();if(id is null){MessageBox.Show("Önce bir parça seçin.");return;}using var f=new StockForm(type);if(f.ShowDialog(this)!=DialogResult.OK)return;try{Database.MoveStock(id.Value,f.Quantity,type,f.Note);LoadData();}catch(Exception ex){MessageBox.Show(ex.Message,"Stok işlemi",MessageBoxButtons.OK,MessageBoxIcon.Warning);}}
 }
