@@ -8,7 +8,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>KombiParcaPro</AssemblyName>
     <RootNamespace>KombiParcaPro</RootNamespace>
-    <Version>2.2.0</Version>
+    <Version>2.3.0</Version>
     <ApplicationIcon>Assets\KombiParcaPro.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
