@@ -1,5 +1,5 @@
 #define MyAppName "KombiParcaPro"
-#define MyAppVersion "2.1.3"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "KombiParcaPro"
 #define MyAppExeName "KombiParcaPro.exe"
 
@@ -11,7 +11,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\KombiParcaPro
 DefaultGroupName=KombiParcaPro
 OutputDir=..\SetupOutput
-OutputBaseFilename=KombiParcaPro_Setup_v2.1.3_x64
+OutputBaseFilename=KombiParcaPro_Setup_v3.0.0_x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
