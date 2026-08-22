@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Assets\catalog-v2-part*.json" />
+    <EmbeddedResource Include="Assets\catalog-industrial-*.json" />
     <Content Include="Assets\3D-Teknik-Servis-Logo.png"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>Assets\3D-Teknik-Servis-Logo.png</Link></Content>
     <Content Include="Assets\KombiParcaPro.ico"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory><Link>Assets\KombiParcaPro.ico</Link></Content>
   </ItemGroup>
