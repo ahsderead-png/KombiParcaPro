@@ -104,6 +104,23 @@ internal static class Database
         return r.Read()?new PhotoInfo(r.GetString(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7)):null;
     }
 
+    public static CatalogDetail? GetCatalogDetail(int id)
+    {
+        using var c=new SqliteConnection(ConnectionString);c.Open();using var q=c.CreateCommand();q.CommandText="SELECT Id,Name,Category,Brand,Model,OemCode,EquivalentCode,Supplier,Shelf,Unit,Stock,MinStock,PurchasePrice,SalePrice,Notes,Technical,Compatibility,Manufacturer,ManufacturerCode,SupplierCode,SourceUrl,ImageUrl,Verification FROM Parts WHERE Id=$id";q.Parameters.AddWithValue("$id",id);using var r=q.ExecuteReader();if(!r.Read())return null;
+        return new CatalogDetail(r.GetInt32(0),r.GetString(1),r.GetString(2),r.GetString(3),r.GetString(4),r.GetString(5),r.GetString(6),r.GetString(7),r.GetString(8),r.GetString(9),r.GetDouble(10),r.GetDouble(11),r.GetDouble(12),r.GetDouble(13),r.GetString(14),r.GetString(15),r.GetString(16),r.GetString(17),r.GetString(18),r.GetString(19),r.GetString(20),r.GetString(21),r.GetString(22));
+    }
+    public static DataTable FindAlternatives(int id)
+    {
+        using var c=new SqliteConnection(ConnectionString);c.Open();using var q=c.CreateCommand();q.CommandText="""
+        SELECT Name AS 'Parça Adı',Brand AS 'Üretici/Marka',ManufacturerCode AS 'Üretici Kodu',OemCode AS 'OEM Kodu',SupplierCode AS 'Stok Kodu',Model AS 'Uyumlu Model',Verification AS 'Doğrulama'
+        FROM Parts WHERE Id<>$id AND (Category=(SELECT Category FROM Parts WHERE Id=$id) OR (OemCode<>'' AND OemCode=(SELECT OemCode FROM Parts WHERE Id=$id)) OR (ManufacturerCode<>'' AND ManufacturerCode=(SELECT ManufacturerCode FROM Parts WHERE Id=$id))) ORDER BY BrandPriority,Brand,Name LIMIT 100
+        """;q.Parameters.AddWithValue("$id",id);using var r=q.ExecuteReader();var t=new DataTable();t.Load(r);return t;
+    }
+    public static DataTable PhotoCatalog()
+    {
+        using var c=new SqliteConnection(ConnectionString);c.Open();using var q=c.CreateCommand();q.CommandText="SELECT Id,Name AS 'Parça Adı',Brand AS 'Marka',Model AS 'Model',OemCode AS 'OEM Kodu',SupplierCode AS 'Stok Kodu' FROM Parts WHERE ImageUrl<>'' ORDER BY BrandPriority,Brand,Name";using var r=q.ExecuteReader();var t=new DataTable();t.Load(r);return t;
+    }
+
     public static void MoveStock(int id, double qty, string type, string note)
     {
         var delta = type == "Giriş" ? qty : -qty; using var c = new SqliteConnection(ConnectionString); c.Open(); using var tx = c.BeginTransaction();
@@ -113,6 +130,7 @@ internal static class Database
 }
 
 internal sealed record PhotoInfo(string Name,string Brand,string Model,string OemCode,string SupplierCode,string ImageUrl,string SourceUrl,string Verification);
+internal sealed record CatalogDetail(int Id,string Name,string Category,string Brand,string Model,string OemCode,string EquivalentCode,string Supplier,string Shelf,string Unit,double Stock,double MinStock,double PurchasePrice,double SalePrice,string Notes,string Technical,string Compatibility,string Manufacturer,string ManufacturerCode,string SupplierCode,string SourceUrl,string ImageUrl,string Verification);
 
 internal sealed class CatalogRow { public string CatalogKey{get;set;}="";public string BrandDisplay{get;set;}="";public string Model{get;set;}="";public string Category{get;set;}="";public string Name{get;set;}="";public string Manufacturer{get;set;}="";public string ManufacturerCode{get;set;}="";public string OemCode{get;set;}="";public string SupplierCode{get;set;}="";public string Technical{get;set;}="";public string Compatibility{get;set;}="";public string Supplier{get;set;}="";public string SourceUrl{get;set;}="";public string ImageUrl{get;set;}="";public string Verification{get;set;}="";public int Priority{get;set;}=99; }
 
