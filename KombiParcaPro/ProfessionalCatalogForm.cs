@@ -13,7 +13,7 @@ internal sealed class ProfessionalCatalogForm : Form
     {
         Text="Profesyonel Teknik Kütüphane";Width=1280;Height=780;MinimumSize=new(900,600);StartPosition=FormStartPosition.CenterParent;
         var header=new Panel{Dock=DockStyle.Top,Height=72,BackColor=Color.FromArgb(24,28,34)};header.Controls.Add(new Label{Text="PROFESYONEL TEKNİK KÜTÜPHANE",Dock=DockStyle.Fill,ForeColor=Color.White,Font=new("Segoe UI Semibold",18),TextAlign=ContentAlignment.MiddleLeft,Padding=new(22,0,0,0)});header.Controls.Add(new Panel{Dock=DockStyle.Bottom,Height=5,BackColor=Color.FromArgb(241,112,20)});
-        var split=new SplitContainer{Dock=DockStyle.Fill,SplitterDistance=300,FixedPanel=FixedPanel.Panel1};split.Panel1.Padding=new(10);split.Panel2.Padding=new(10);split.Panel1.Controls.Add(tree);split.Panel2.Controls.Add(grid);split.Panel2.Controls.Add(title);Controls.Add(split);Controls.Add(header);
+        var split=new SplitContainer{Dock=DockStyle.Fill,SplitterDistance=300,FixedPanel=FixedPanel.Panel1};split.Panel1.Padding=new(10);split.Panel2.Padding=new(10);var parts=new Button{Text="BU KATEGORİNİN YEDEK PARÇALARI",Dock=DockStyle.Bottom,Height=46,BackColor=Color.FromArgb(241,112,20),ForeColor=Color.White,FlatStyle=FlatStyle.Flat};parts.Click+=(_,_)=>{var category=tree.SelectedNode?.Text;if(string.IsNullOrWhiteSpace(category))return;using var f=new CategoryPartsForm(category);f.ShowDialog(this);};split.Panel1.Controls.Add(tree);split.Panel1.Controls.Add(parts);split.Panel2.Controls.Add(grid);split.Panel2.Controls.Add(title);Controls.Add(split);Controls.Add(header);
         foreach(var category in data.Select(x=>x.Category).Distinct())tree.Nodes.Add(category);tree.AfterSelect+=(_,_)=>LoadCategory();grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex<0)return;using var f=new ProfessionalResourceDetailForm(tree.SelectedNode?.Text??"",Convert.ToString(grid.Rows[e.RowIndex].Cells["Katalog/Parça Grubu"].Value)??"",Convert.ToString(grid.Rows[e.RowIndex].Cells["Üretici"].Value)??"",Convert.ToString(grid.Rows[e.RowIndex].Cells["İçerik"].Value)??"",Convert.ToString(grid.Rows[e.RowIndex].Cells["Doğrulama"].Value)??"",Convert.ToString(grid.Rows[e.RowIndex].Cells["Bağlantı"].Value)??"");f.ShowDialog(this);};if(tree.Nodes.Count>0)tree.SelectedNode=tree.Nodes[0];
     }
     void LoadCategory(){var category=tree.SelectedNode?.Text??"";title.Text=category;var t=new DataTable();t.Columns.Add("Katalog/Parça Grubu");t.Columns.Add("Üretici");t.Columns.Add("İçerik");t.Columns.Add("Doğrulama");t.Columns.Add("Bağlantı");foreach(var x in data.Where(x=>x.Category==category))t.Rows.Add(x.Name,x.Manufacturer,x.Detail,x.Verification,x.Url);grid.DataSource=t;}
@@ -33,6 +33,12 @@ internal sealed class ProfessionalCatalogForm : Form
       new("Hidrolik Şemalar ve Otomasyon","calorMATIC 630","Vaillant","Kaskad otomasyonu, modüller ve bağlantı şemaları","Resmî üretici PDF","https://www.vaillant.com.tr/pdf/calormatic-630-821636.pdf")
     ];
     sealed record Resource(string Category,string Name,string Manufacturer,string Detail,string Verification,string Url);
+}
+
+internal sealed class CategoryPartsForm : Form
+{
+    readonly DataGridView grid=new(){Dock=DockStyle.Fill,ReadOnly=true,AllowUserToAddRows=false,SelectionMode=DataGridViewSelectionMode.FullRowSelect,MultiSelect=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.DisplayedCells};
+    public CategoryPartsForm(string category){Text=category+" — Yedek Parça Kataloğu";Width=1200;Height=720;StartPosition=FormStartPosition.CenterParent;var header=new Label{Text=category.ToUpperInvariant()+" — YEDEK PARÇALAR",Dock=DockStyle.Top,Height=66,BackColor=Color.FromArgb(24,28,34),ForeColor=Color.White,Font=new("Segoe UI Semibold",16),TextAlign=ContentAlignment.MiddleLeft,Padding=new(18,0,0,0)};grid.DataSource=Database.CategoryCatalog(category);if(grid.Columns.Contains("Id"))grid.Columns["Id"]!.Visible=false;grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex<0)return;var id=Convert.ToInt32(grid.Rows[e.RowIndex].Cells["Id"].Value);using var f=new PartDetailForm(id);f.ShowDialog(this);};Controls.Add(grid);Controls.Add(header);}
 }
 
 internal sealed class ProfessionalResourceDetailForm : Form
